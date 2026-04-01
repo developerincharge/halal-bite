@@ -1,0 +1,55 @@
+# =====================================================
+# HALAL-BITE — Service Registry Configuration
+# =====================================================
+# This file configures the Eureka server.
+# Spring Boot reads this automatically on startup.
+# =====================================================
+
+server:
+  port: 8761   # Standard Eureka port — all services know to look here
+
+spring:
+  application:
+    name: service-registry   # This name appears in logs and Eureka dashboard
+
+  # Disable Spring Security's default login for local dev
+  # TODO: Enable authentication in production profile
+  security:
+    user:
+      name: admin
+      password: admin
+
+# =====================================================
+# Eureka Server Configuration
+# =====================================================
+eureka:
+  instance:
+    hostname: localhost
+
+  client:
+    # This is the registry itself — it should NOT register with itself
+    register-with-eureka: false
+    # It also does not need to fetch the registry from itself
+    fetch-registry: false
+    service-url:
+      defaultZone: http://admin:admin@localhost:8761/eureka/
+
+  server:
+    # Wait time before starting evicting unresponsive services
+    # Longer in dev so services have time to start up
+    eviction-interval-timer-in-ms: 30000
+    # In dev mode, disable the "EMERGENCY! EUREKA MAY BE INCORRECTLY CLAIMING..."
+    # warning that appears when fewer than 85% of services are registered
+    enable-self-preservation: false
+
+# =====================================================
+# Actuator — exposes /actuator/health for Docker healthcheck
+# =====================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: always
