@@ -15,8 +15,8 @@ import org.springframework.test.context.TestPropertySource;
  * This is the most fundamental test — if this fails, nothing else works.
  * Run this after any configuration change to catch problems early.
  */
-//@SpringBootTest
-//@TestPropertySource(properties = {
+@SpringBootTest
+@TestPropertySource(properties = {
     // Use a random port in tests so they don't conflict with a running instance
     "server.port=0",
     "eureka.client.register-with-eureka=false",
@@ -24,7 +24,7 @@ import org.springframework.test.context.TestPropertySource;
 })
 class ServiceRegistryApplicationTest {
 
-   // @Test
+    @Test
     void contextLoads() {
         // If the Spring context starts without throwing an exception,
         // this test passes. Simple but powerful — catches misconfigurations

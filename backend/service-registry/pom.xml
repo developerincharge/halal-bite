@@ -50,10 +50,10 @@
 
         <!-- Spring Security — locks down the Eureka dashboard
              in production. Configured to allow in local profile. -->
-        <dependency>
+<!--        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
+        </dependency>-->
 
         <!-- Test dependencies -->
         <dependency>

@@ -14,10 +14,10 @@ spring:
 
   # Disable Spring Security's default login for local dev
   # TODO: Enable authentication in production profile
-  security:
-    user:
-      name: admin
-      password: admin
+#  security:
+#    user:
+#      name: admin
+#      password: admin
 
 # =====================================================
 # Eureka Server Configuration
@@ -32,7 +32,7 @@ eureka:
     # It also does not need to fetch the registry from itself
     fetch-registry: false
     service-url:
-      defaultZone: http://admin:admin@localhost:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
 
   server:
     # Wait time before starting evicting unresponsive services
