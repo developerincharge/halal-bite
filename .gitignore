@@ -1,0 +1,56 @@
+# ============================================================
+# HALAL-BITE — .gitignore
+# ============================================================
+
+# Environment variables — NEVER commit real secrets
+.env
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Node / npm (frontend apps)
+node_modules/
+dist/
+build/
+.next/
+.expo/
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Terraform state — contains sensitive data
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Spring Boot
+application-local.yml
+application-prod.yml
+
+# Test coverage
+coverage/
+.nyc_output/

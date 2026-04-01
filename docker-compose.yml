@@ -1,0 +1,471 @@
+version: '3.9'
+
+# ============================================================
+# HALAL-BITE — Local Development Docker Compose
+# ============================================================
+# Starts: PostgreSQL, Redis, Kafka + Zookeeper,
+#         service-registry (Eureka), api-gateway,
+#         and all 7 backend microservices.
+#
+# Usage:
+#   docker compose up -d              → start everything
+#   docker compose up -d postgres     → start only postgres
+#   docker compose logs -f order-service → tail one service
+#   docker compose down               → stop everything
+#   docker compose down -v            → stop + delete volumes
+# ============================================================
+
+networks:
+  halal-bite-network:
+    driver: bridge
+    name: halal-bite-network
+
+volumes:
+  postgres-data:
+    name: halal-bite-postgres-data
+  redis-data:
+    name: halal-bite-redis-data
+  zookeeper-data:
+    name: halal-bite-zookeeper-data
+  kafka-data:
+    name: halal-bite-kafka-data
+
+# ============================================================
+# COMMON REUSABLE CONFIGS
+# ============================================================
+x-spring-common: &spring-common
+  networks:
+    - halal-bite-network
+  restart: unless-stopped
+  environment:
+    SPRING_PROFILES_ACTIVE: local
+    EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://service-registry:8761/eureka/
+    SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+    SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-halalbiteuser}
+    SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-halalbitepass}
+    SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+    SPRING_FLYWAY_ENABLED: "true"
+    LOGGING_LEVEL_COM_HALALBITE: DEBUG
+  depends_on:
+    postgres:
+      condition: service_healthy
+    service-registry:
+      condition: service_healthy
+
+# ============================================================
+# INFRASTRUCTURE SERVICES
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # PostgreSQL — single instance, separate DB per service
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: halal-bite-postgres
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-halalbiteuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-halalbitepass}
+      POSTGRES_DB: postgres          # default connection DB
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Init script creates all microservice databases on first start
+      - ./infrastructure/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-halalbiteuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ----------------------------------------------------------
+  # Redis — caching (menus, restaurant listings, sessions)
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: halal-bite-redis
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-halalbiteRedis123}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-halalbiteRedis123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Zookeeper — required by Kafka
+  # ----------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: halal-bite-zookeeper
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Kafka — async messaging between services
+  # (order-service → notification-service, payment events, etc.)
+  # ----------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: halal-bite-kafka
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"       # for services inside docker network
+      - "29092:29092"     # for connecting from your local machine
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Pre-create your topics
+      KAFKA_CREATE_TOPICS: >
+        order.placed:1:1,
+        order.confirmed:1:1,
+        order.status.updated:1:1,
+        payment.succeeded:1:1,
+        payment.failed:1:1,
+        notification.email:1:1,
+        notification.push:1:1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------
+  # Kafka UI — visual Kafka topic browser (dev only)
+  # Access: http://localhost:8090
+  # ----------------------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: halal-bite-kafka-ui
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: halal-bite-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+  # ----------------------------------------------------------
+  # Keycloak — OAuth 2.0 / OpenID Connect (auth-service)
+  # Access: http://localhost:8180
+  # Admin:  admin / admin (local only — NEVER use in prod)
+  # ----------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: halal-bite-keycloak
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: ${POSTGRES_USER:-halalbiteuser}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-halalbitepass}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    volumes:
+      # TODO: Place your exported Keycloak realm JSON here
+      - ./infrastructure/keycloak:/opt/keycloak/data/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ============================================================
+  # HALAL-BITE BACKEND MICROSERVICES
+  # ============================================================
+
+  # ----------------------------------------------------------
+  # Service Registry (Eureka) — port 8761
+  # Access: http://localhost:8761
+  # Start this FIRST — all other services depend on it
+  # ----------------------------------------------------------
+  service-registry:
+    build:
+      context: ./backend/service-registry
+      dockerfile: Dockerfile
+    image: halal-bite/service-registry:local
+    container_name: halal-bite-service-registry
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ----------------------------------------------------------
+  # API Gateway — port 8080
+  # ALL frontend requests go through here
+  # Access: http://localhost:8080
+  # ----------------------------------------------------------
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    image: halal-bite/api-gateway:local
+    container_name: halal-bite-api-gateway
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://service-registry:8761/eureka/
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/halal-bite
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-halalbiteRedis123}
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # User Service — port 8082
+  # Manages user profiles, addresses, preferences
+  # ----------------------------------------------------------
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+    image: halal-bite/user-service:local
+    container_name: halal-bite-user-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *spring-common
+      DB_NAME: user_service_db
+      SERVER_PORT: 8082
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/halal-bite
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Restaurant Service — port 8083
+  # Manages restaurant profiles and affiliate revenue config
+  # ----------------------------------------------------------
+  restaurant-service:
+    build:
+      context: ./backend/restaurant-service
+      dockerfile: Dockerfile
+    image: halal-bite/restaurant-service:local
+    container_name: halal-bite-restaurant-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      <<: *spring-common
+      DB_NAME: restaurant_service_db
+      SERVER_PORT: 8083
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-halalbiteRedis123}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Menu Service — port 8084
+  # Manages food items, categories, pricing, availability
+  # ----------------------------------------------------------
+  menu-service:
+    build:
+      context: ./backend/menu-service
+      dockerfile: Dockerfile
+    image: halal-bite/menu-service:local
+    container_name: halal-bite-menu-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *spring-common
+      DB_NAME: menu_service_db
+      SERVER_PORT: 8084
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-halalbiteRedis123}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Order Service — port 8085
+  # Manages order lifecycle: placed → confirmed → delivered
+  # ----------------------------------------------------------
+  order-service:
+    build:
+      context: ./backend/order-service
+      dockerfile: Dockerfile
+    image: halal-bite/order-service:local
+    container_name: halal-bite-order-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      <<: *spring-common
+      DB_NAME: order_service_db
+      SERVER_PORT: 8085
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Payment Service — port 8086
+  # Stripe Connect: handles payments + platform revenue split
+  # ----------------------------------------------------------
+  payment-service:
+    build:
+      context: ./backend/payment-service
+      dockerfile: Dockerfile
+    image: halal-bite/payment-service:local
+    container_name: halal-bite-payment-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *spring-common
+      DB_NAME: payment_service_db
+      SERVER_PORT: 8086
+      # TODO: Add your Stripe keys to .env file — NEVER hardcode them
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PLATFORM_ACCOUNT_ID: ${STRIPE_PLATFORM_ACCOUNT_ID}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Notification Service — port 8087
+  # Sends email and push notifications via Kafka events
+  # ----------------------------------------------------------
+  notification-service:
+    build:
+      context: ./backend/notification-service
+      dockerfile: Dockerfile
+    image: halal-bite/notification-service:local
+    container_name: halal-bite-notification-service
+    networks:
+      - halal-bite-network
+    restart: unless-stopped
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *spring-common
+      DB_NAME: notification_service_db
+      SERVER_PORT: 8087
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # TODO: Add your email provider credentials to .env
+      MAIL_HOST: ${MAIL_HOST:-smtp.mailtrap.io}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8087/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
