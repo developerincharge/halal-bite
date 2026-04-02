@@ -1,9 +1,9 @@
 server:
-  port: 8082
+  port: 8081
 
 spring:
   application:
-    name: user-service
+    name: auth-service
 
   datasource:
     url: jdbc:postgresql://localhost:5432/user_service_db
@@ -28,8 +28,18 @@ eureka:
   instance:
     prefer-ip-address: true
 
+# =====================================================
+# JWT Configuration
+# =====================================================
+# secret: must be at least 32 characters long
+# This SAME secret must be used in user-service and
+# restaurant-service to validate tokens.
+# In production: use a long random string and store
+# it in environment variables, never hardcode it.
+# =====================================================
 jwt:
   secret: halal-bite-super-secret-jwt-key-2026-production
+  expiration-ms: 86400000   # 24 hours in milliseconds
 
 management:
   endpoints:
@@ -42,4 +52,4 @@ management:
 
 logging:
   level:
-    com.halalbite.userservice: DEBUG
+    com.halalbite.authservice: DEBUG

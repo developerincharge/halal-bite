@@ -45,14 +45,14 @@ public class UserService {
      * 3. We extract the Keycloak ID from the JWT and create the profile here
      */
     @Transactional
-    public UserDto.UserResponse createUser(UserDto.CreateUserRequest request, String keycloakId) {
-        log.info("Creating user profile for keycloakId: {}", keycloakId);
+    public UserDto.UserResponse createUser(UserDto.CreateUserRequest request, String userId) {
+        log.info("Creating user profile for userId: {}", userId);
 
         // Check if a profile already exists for this Keycloak account
-        if (userRepository.findByKeycloakId(keycloakId).isPresent()) {
-            log.warn("User profile already exists for keycloakId: {}", keycloakId);
+        if (userRepository.findByuserId(userId).isPresent()) {
+            log.warn("User profile already exists for userId: {}", userId);
             // Return existing profile rather than throwing an error
-            return userMapper.toResponse(userRepository.findByKeycloakId(keycloakId).get());
+            return userMapper.toResponse(userRepository.findByuserId(userId).get());
         }
 
         // Check if email is already used by another account
@@ -61,7 +61,7 @@ public class UserService {
         }
 
         User user = userMapper.toEntity(request);
-        user.setKeycloakId(keycloakId);
+        user.setuserId(userId);
 
         User savedUser = userRepository.save(user);
         log.info("User profile created with id: {}", savedUser.getId());
@@ -71,13 +71,13 @@ public class UserService {
 
     /**
      * Get the profile of the currently authenticated user.
-     * The keycloakId comes from the JWT token — not from the URL.
+     * The userId comes from the JWT token — not from the URL.
      * This prevents users from reading each other's profiles.
      */
     @Transactional(readOnly = true)
-    public UserDto.UserResponse getCurrentUser(String keycloakId) {
-        log.debug("Fetching profile for keycloakId: {}", keycloakId);
-        User user = findActiveUserByKeycloakId(keycloakId);
+    public UserDto.UserResponse getCurrentUser(String userId) {
+        log.debug("Fetching profile for userId: {}", userId);
+        User user = findActiveUserByuserId(userId);
         return userMapper.toResponse(user);
     }
 
@@ -100,9 +100,9 @@ public class UserService {
      * Email cannot be changed here — that is handled by Keycloak.
      */
     @Transactional
-    public UserDto.UserResponse updateCurrentUser(UserDto.UpdateUserRequest request, String keycloakId) {
-        log.info("Updating profile for keycloakId: {}", keycloakId);
-        User user = findActiveUserByKeycloakId(keycloakId);
+    public UserDto.UserResponse updateCurrentUser(UserDto.UpdateUserRequest request, String userId) {
+        log.info("Updating profile for userId: {}", userId);
+        User user = findActiveUserById(userId);
         userMapper.updateEntityFromRequest(request, user);
         return userMapper.toResponse(userRepository.save(user));
     }
@@ -112,9 +112,9 @@ public class UserService {
      * If isDefault is true, all other addresses are set to non-default first.
      */
     @Transactional
-    public UserDto.UserResponse addAddress(UserDto.AddressRequest request, String keycloakId) {
-        log.info("Adding address for keycloakId: {}", keycloakId);
-        User user = findActiveUserByKeycloakId(keycloakId);
+    public UserDto.UserResponse addAddress(UserDto.AddressRequest request, String userId) {
+        log.info("Adding address for userId: {}", userId);
+        User user = findActiveUserByuserId(userId);
 
         // If this new address is the default, unset all existing defaults
         if (Boolean.TRUE.equals(request.getIsDefault())) {
@@ -141,17 +141,17 @@ public class UserService {
      * Sets isActive = false. Data is preserved for order history.
      */
     @Transactional
-    public void deactivateCurrentUser(String keycloakId) {
-        log.info("Deactivating account for keycloakId: {}", keycloakId);
-        User user = findActiveUserByKeycloakId(keycloakId);
+    public void deactivateCurrentUser(String userId) {
+        log.info("Deactivating account for userId: {}", userId);
+        User user = findActiveUserByuserId(userId);
         user.setIsActive(false);
         userRepository.save(user);
     }
 
     // ---- Private helpers ----
 
-    private User findActiveUserByKeycloakId(String keycloakId) {
-        return userRepository.findByKeycloakIdAndIsActiveTrue(keycloakId)
-            .orElseThrow(() -> new RuntimeException("Active user not found for keycloakId: " + keycloakId));
+    private User findActiveUserByuserId(String userId) {
+        return userRepository.findByuserIdAndIsActiveTrue(userId)
+            .orElseThrow(() -> new RuntimeException("Active user not found for userId: " + userId));
     }
 }

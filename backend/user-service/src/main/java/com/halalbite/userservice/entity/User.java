@@ -51,8 +51,8 @@ public class User {
 
     // Links this profile to the Keycloak account
     // Extracted from the JWT token's "sub" claim
-    @Column(name = "keycloak_id", unique = true, nullable = false)
-    private String keycloakId;
+    @Column(name = "user_id", unique = true, nullable = false)
+    private String userId;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;

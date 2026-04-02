@@ -54,9 +54,9 @@ public class UserController {
             @Valid @RequestBody UserDto.CreateUserRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String keycloakId = jwt.getSubject();
-        log.info("POST /api/v1/users — keycloakId: {}", keycloakId);
-        UserDto.UserResponse response = userService.createUser(request, keycloakId);
+        String userId = jwt.getSubject();
+        log.info("POST /api/v1/users — userId: {}", userId);
+        UserDto.UserResponse response = userService.createUser(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -69,9 +69,9 @@ public class UserController {
     public ResponseEntity<UserDto.UserResponse> getCurrentUser(
             @AuthenticationPrincipal Jwt jwt) {
 
-        String keycloakId = jwt.getSubject();
-        log.debug("GET /api/v1/users/me — keycloakId: {}", keycloakId);
-        return ResponseEntity.ok(userService.getCurrentUser(keycloakId));
+        String userId = jwt.getSubject();
+        log.debug("GET /api/v1/users/me — userId: {}", userId);
+        return ResponseEntity.ok(userService.getCurrentUser(userId));
     }
 
     /**
@@ -84,9 +84,9 @@ public class UserController {
             @Valid @RequestBody UserDto.UpdateUserRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String keycloakId = jwt.getSubject();
-        log.info("PATCH /api/v1/users/me — keycloakId: {}", keycloakId);
-        return ResponseEntity.ok(userService.updateCurrentUser(request, keycloakId));
+        String userId = jwt.getSubject();
+        log.info("PATCH /api/v1/users/me — userId: {}", userId);
+        return ResponseEntity.ok(userService.updateCurrentUser(request, userId));
     }
 
     /**
@@ -97,9 +97,9 @@ public class UserController {
     public ResponseEntity<Void> deactivateCurrentUser(
             @AuthenticationPrincipal Jwt jwt) {
 
-        String keycloakId = jwt.getSubject();
-        log.info("DELETE /api/v1/users/me — keycloakId: {}", keycloakId);
-        userService.deactivateCurrentUser(keycloakId);
+        String userId = jwt.getSubject();
+        log.info("DELETE /api/v1/users/me — userId: {}", userId);
+        userService.deactivateCurrentUser(userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -112,10 +112,10 @@ public class UserController {
             @Valid @RequestBody UserDto.AddressRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String keycloakId = jwt.getSubject();
-        log.info("POST /api/v1/users/me/addresses — keycloakId: {}", keycloakId);
+        String userId = jwt.getSubject();
+        log.info("POST /api/v1/users/me/addresses — userId: {}", userId);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(userService.addAddress(request, keycloakId));
+            .body(userService.addAddress(request, userId));
     }
 
     /**

@@ -1,10 +1,17 @@
 package com.halalbite.apigateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Security Configuration for API Gateway
@@ -32,41 +39,31 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Bean
+    public ReactiveJwtDecoder reactiveJwtDecoder() {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        return NimbusReactiveJwtDecoder.withSecretKey(secretKey).build();
+    }
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http
-            .csrf(csrf -> csrf.disable())
-
-            .authorizeExchange(exchanges -> exchanges
-
-                // ---- PUBLIC ROUTES — no JWT needed ----
-
-                // Actuator health endpoint — needed by Docker healthcheck
-                .pathMatchers("/actuator/**").permitAll()
-
-                // Auth endpoints — user must be able to login/register
-                // without a token (they don't have one yet!)
-                .pathMatchers("/api/v1/auth/**").permitAll()
-
-                // Browse restaurants and menus — public, no login required
-                // Users should be able to see restaurants before signing up
-                .pathMatchers("/api/v1/restaurants/**").permitAll()
-                .pathMatchers("/api/v1/menus/**").permitAll()
-
-                // Eureka dashboard (if accessed through gateway)
-                .pathMatchers("/eureka/**").permitAll()
-
-                // ---- PROTECTED ROUTES — valid JWT required ----
-
-                // Everything else requires authentication
-                .anyExchange().authenticated()
-            )
-
-            // Tell Spring Security to validate JWT tokens
-            // using Keycloak as the token issuer (configured in application.yml)
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> {})
-            );
+                .csrf(csrf -> csrf.disable())
+                .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers("/actuator/**").permitAll()
+                        .pathMatchers("/api/v1/auth/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/restaurants").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/search").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/{id}").permitAll()
+                        .anyExchange().authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
+                );
 
         return http.build();
     }

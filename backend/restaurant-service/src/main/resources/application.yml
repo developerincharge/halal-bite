@@ -19,12 +19,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8180/realms/halal-bite
-
 eureka:
   client:
     service-url:
@@ -33,6 +27,9 @@ eureka:
     register-with-eureka: true
   instance:
     prefer-ip-address: true
+
+jwt:
+  secret: halal-bite-super-secret-jwt-key-2026-production
 
 management:
   endpoints:

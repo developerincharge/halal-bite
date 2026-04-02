@@ -18,7 +18,7 @@ import java.util.UUID;
  *   findByEmail("john@example.com")
  *   → SELECT * FROM users WHERE email = 'john@example.com'
  *
- *   findByKeycloakId("abc-123")
+ *   findByUserId("abc-123")
  *   → SELECT * FROM users WHERE keycloak_id = 'abc-123'
  *
  *   existsByEmail("john@example.com")
@@ -28,7 +28,7 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     // Find a user by their Keycloak subject ID (from JWT token)
-    Optional<User> findByKeycloakId(String keycloakId);
+    Optional<User> findByUserId(String keycloakId);
 
     // Find a user by email address
     Optional<User> findByEmail(String email);
@@ -37,5 +37,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     // Find only active users by Keycloak ID
-    Optional<User> findByKeycloakIdAndIsActiveTrue(String keycloakId);
+    Optional<User> findByUserIdAndIsActiveTrue(String keycloakId);
 }
