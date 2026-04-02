@@ -12,8 +12,8 @@ target/
 *.war
 *.ear
 .mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+!backend/service-registry/src/main/**/target/
+!backend/service-registry/src/test/**/target/
 
 # IntelliJ IDEA
 .idea/
