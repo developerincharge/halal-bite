@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/search").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/{id}").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/menus/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

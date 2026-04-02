@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -66,6 +67,22 @@ public class RestaurantService {
         }
 
         Restaurant restaurant = restaurantMapper.toEntity(request);
+        // Set defaults explicitly — MapStruct bypasses @Builder.Default
+        if (restaurant.getAffiliateRevenuePercentage() == null) {
+            restaurant.setAffiliateRevenuePercentage(new BigDecimal("0.15"));
+        }
+        if (restaurant.getMinimumOrderAmount() == null) {
+            restaurant.setMinimumOrderAmount(new BigDecimal("10.00"));
+        }
+        if (restaurant.getEstimatedDeliveryMinutes() == null) {
+            restaurant.setEstimatedDeliveryMinutes(45);
+        }
+        if (restaurant.getAverageRating() == null) {
+            restaurant.setAverageRating(BigDecimal.ZERO);
+        }
+        if (restaurant.getTotalReviews() == null) {
+            restaurant.setTotalReviews(0);
+        }
         restaurant.setOwnerKeycloakId(ownerKeycloakId);
         restaurant.setStatus(RestaurantStatus.PENDING);
 
