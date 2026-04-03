@@ -28,7 +28,7 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     // Find a user by their Keycloak subject ID (from JWT token)
-    Optional<User> findByUserId(String keycloakId);
+    Optional<User> findByUserId(String userId);
 
     // Find a user by email address
     Optional<User> findByEmail(String email);
@@ -37,5 +37,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     // Find only active users by Keycloak ID
-    Optional<User> findByUserIdAndIsActiveTrue(String keycloakId);
+    Optional<User> findByUserIdAndIsActiveTrue(String userId);
 }

@@ -52,7 +52,7 @@ public class UserService {
         if (userRepository.findByUserId(userId).isPresent()) {
             log.warn("User profile already exists for userId: {}", userId);
             // Return existing profile rather than throwing an error
-            return userMapper.toResponse(userRepository.findByuserId(userId).get());
+            return userMapper.toResponse(userRepository.findByUserId(userId).get());
         }
 
         // Check if email is already used by another account
@@ -61,7 +61,7 @@ public class UserService {
         }
 
         User user = userMapper.toEntity(request);
-        user.setuserId(userId);
+        user.setUserId(userId);
 
         User savedUser = userRepository.save(user);
         log.info("User profile created with id: {}", savedUser.getId());
@@ -77,7 +77,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto.UserResponse getCurrentUser(String userId) {
         log.debug("Fetching profile for userId: {}", userId);
-        User user = findActiveUserByuserId(userId);
+        User user = findActiveUserByUserId(userId);
         return userMapper.toResponse(user);
     }
 
@@ -102,7 +102,7 @@ public class UserService {
     @Transactional
     public UserDto.UserResponse updateCurrentUser(UserDto.UpdateUserRequest request, String userId) {
         log.info("Updating profile for userId: {}", userId);
-        User user = findActiveUserById(userId);
+        User user = findActiveUserByUserId(userId);
         userMapper.updateEntityFromRequest(request, user);
         return userMapper.toResponse(userRepository.save(user));
     }
@@ -114,7 +114,7 @@ public class UserService {
     @Transactional
     public UserDto.UserResponse addAddress(UserDto.AddressRequest request, String userId) {
         log.info("Adding address for userId: {}", userId);
-        User user = findActiveUserByuserId(userId);
+        User user = findActiveUserByUserId(userId);
 
         // If this new address is the default, unset all existing defaults
         if (Boolean.TRUE.equals(request.getIsDefault())) {
@@ -143,14 +143,14 @@ public class UserService {
     @Transactional
     public void deactivateCurrentUser(String userId) {
         log.info("Deactivating account for userId: {}", userId);
-        User user = findActiveUserByuserId(userId);
+        User user = findActiveUserByUserId(userId);
         user.setIsActive(false);
         userRepository.save(user);
     }
 
     // ---- Private helpers ----
 
-    private User findActiveUserByuserId(String userId) {
+    private User findActiveUserByUserId(String userId) {
         return userRepository.findByUserIdAndIsActiveTrue(userId)
             .orElseThrow(() -> new RuntimeException("Active user not found for userId: " + userId));
     }
