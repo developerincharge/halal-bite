@@ -49,7 +49,7 @@ public class UserService {
         log.info("Creating user profile for userId: {}", userId);
 
         // Check if a profile already exists for this Keycloak account
-        if (userRepository.findByuserId(userId).isPresent()) {
+        if (userRepository.findByUserId(userId).isPresent()) {
             log.warn("User profile already exists for userId: {}", userId);
             // Return existing profile rather than throwing an error
             return userMapper.toResponse(userRepository.findByuserId(userId).get());
@@ -151,7 +151,7 @@ public class UserService {
     // ---- Private helpers ----
 
     private User findActiveUserByuserId(String userId) {
-        return userRepository.findByuserIdAndIsActiveTrue(userId)
+        return userRepository.findByUserIdAndIsActiveTrue(userId)
             .orElseThrow(() -> new RuntimeException("Active user not found for userId: " + userId));
     }
 }
