@@ -1,0 +1,75 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification_service_db
+    username: halalbiteuser
+    password: halalbitepass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: localhost:29092
+
+  # =====================================================
+  # Email Configuration — Mailtrap for development
+  # =====================================================
+  # Sign up free at mailtrap.io → Inboxes → SMTP Settings
+  # Copy your username and password and paste below.
+  # All emails will appear in your Mailtrap inbox — nothing
+  # reaches real email addresses during development.
+  #
+  # For production: replace with real SMTP provider:
+  #   Gmail:    smtp.gmail.com port 587
+  #   SendGrid: smtp.sendgrid.net port 587
+  #   AWS SES:  email-smtp.<region>.amazonaws.com port 587
+  # =====================================================
+  mail:
+    host: ${MAIL_HOST:sandbox.smtp.mailtrap.io}
+    port: ${MAIL_PORT:2525}
+    username: ${MAIL_USERNAME:syedrizvidev007@gmail.com}
+    password: ${MAIL_PASSWORD:Mohammad786*}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: halal-bite-super-secret-jwt-key-2026-production
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.halalbite.notificationservice: DEBUG
+    org.springframework.kafka: INFO
+    org.springframework.mail: DEBUG
