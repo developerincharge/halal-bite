@@ -1,0 +1,62 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: payment-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payment_service_db
+    username: halalbiteuser
+    password: halalbitepass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# Stripe configuration
+# Replace with real keys from dashboard.stripe.com
+# Leave as-is to use simulation mode (no real Stripe needed)
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_REPLACE_WITH_YOUR_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_REPLACE_WITH_YOUR_KEY}
+  platform-account-id: ${STRIPE_PLATFORM_ACCOUNT_ID:acct_REPLACE_WITH_YOUR_ID}
+
+jwt:
+  secret: halal-bite-super-secret-jwt-key-2026-production
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.halalbite.paymentservice: DEBUG
+    org.springframework.kafka: INFO
