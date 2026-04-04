@@ -35,26 +35,30 @@ public class CorsConfig {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
         // Allowed origins — your frontend apps
-        corsConfig.setAllowedOrigins(List.of(
-            "http://localhost:3000",   // Next.js admin portal
-            "http://localhost:4200",   // Angular restaurant dashboard
-            "http://localhost:8081",   // React Native / Expo web
-            "http://localhost:19006"   // Expo web alternate port
-        ));
+          corsConfig.addAllowedOrigin("http://localhost:4200");
+//        corsConfig.setAllowedOrigins(List.of(
+//            "http://localhost:3000",   // Next.js admin portal
+//            "http://localhost:4200",   // Angular restaurant dashboard
+//            "http://localhost:8081",   // React Native / Expo web
+//            "http://localhost:19006"   // Expo web alternate port
+//        ));
 
         // Allowed HTTP methods
-        corsConfig.setAllowedMethods(List.of(
-            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-        ));
+        corsConfig.addAllowedMethod("*");
+//        corsConfig.setAllowedMethods(List.of(
+//            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+//        ));
 
         // Allowed headers — Authorization is critical for JWT
-        corsConfig.setAllowedHeaders(List.of(
-            "Authorization",
-            "Content-Type",
-            "Accept",
-            "Origin",
-            "X-Requested-With"
-        ));
+         corsConfig.addAllowedHeader("*");
+
+//        corsConfig.setAllowedHeaders(List.of(
+//            "Authorization",
+//            "Content-Type",
+//            "Accept",
+//            "Origin",
+//            "X-Requested-With"
+//        ));
 
         // Allow cookies and auth headers to be sent
         corsConfig.setAllowCredentials(true);

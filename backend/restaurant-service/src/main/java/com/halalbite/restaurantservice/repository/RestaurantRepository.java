@@ -14,26 +14,33 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Restaurant Repository
+ * RestaurantRepository
  *
- * Note the use of Page<Restaurant> for listing restaurants.
- * Customers browse restaurants — there could be hundreds.
- * We never return ALL restaurants in one response — always paginated.
- * Pageable lets the caller specify page number, page size, and sort order.
+ * IMPORTANT: Every method name after findBy must match the exact
+ * Java field name in Restaurant.java — NOT the database column name.
  *
- * Example usage in service:
- *   Pageable pageable = PageRequest.of(0, 20, Sort.by("name"));
- *   Page<Restaurant> page = repository.findByStatus(ACTIVE, pageable);
+ * Our field is: ownerUserId
+ * So the method is: findByOwnerUserId  ✅
+ * NOT:             findByOwnerId       ❌
+ * NOT:             findByOwnerKeycloakId ❌
  */
 @Repository
 public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
 
-    // Find a restaurant by its owner's Keycloak ID
-    // Used when RESTAURANT_OWNER logs in to manage their restaurant
-    Optional<Restaurant> findByOwnerKeycloakId(String ownerKeycloakId);
+    // Find restaurants by owner's userId (JWT subject from auth-service)
+    List<Restaurant> findByOwnerUserId(String ownerUserId);
 
-    // List all active restaurants — paginated (for customer browsing)
+    // Find single restaurant by owner — used when owner manages their restaurant
+    Optional<Restaurant> findFirstByOwnerUserId(String ownerUserId);
+
+    // Check if owner already has a restaurant registered
+    boolean existsByOwnerUserId(String ownerUserId);
+
+    // List active restaurants — paginated for customer browsing
     Page<Restaurant> findByStatus(RestaurantStatus status, Pageable pageable);
+
+    // List restaurants by status (without pagination) — used by admin
+    List<Restaurant> findByStatus(RestaurantStatus status);
 
     // Search active restaurants by name or cuisine type
     @Query("""
@@ -53,17 +60,4 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
         String city,
         Pageable pageable
     );
-
-    // Find restaurants by cuisine type
-    Page<Restaurant> findByStatusAndCuisineTypeIgnoreCase(
-        RestaurantStatus status,
-        String cuisineType,
-        Pageable pageable
-    );
-
-    // Check if owner already has a restaurant registered
-    boolean existsByOwnerKeycloakId(String ownerKeycloakId);
-
-    // List restaurants by status — used by admin
-    List<Restaurant> findByStatus(RestaurantStatus status);
 }

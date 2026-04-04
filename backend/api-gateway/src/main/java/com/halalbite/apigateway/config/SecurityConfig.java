@@ -9,9 +9,14 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * Security Configuration for API Gateway
@@ -50,16 +55,44 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // Allow Angular dev server and production domains
+        config.setAllowedOrigins(List.of(
+                "http://localhost:4200",   // Angular dev server
+                "http://localhost:3000",   // React dev server (for future customer app)
+                "http://localhost:4201"    // Admin portal
+        ));
+
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);      // Cache preflight for 1 hour
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+
+    @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/actuator/**").permitAll()
                         .pathMatchers("/api/v1/auth/**").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/api/v1/restaurants").permitAll()
+                        // Public restaurant browsing
+                        .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/search").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/{id}").permitAll()
+                        // Public menu browsing
                         .pathMatchers(HttpMethod.GET, "/api/v1/menus/**").permitAll()
+                        // Stripe webhook — no JWT, uses Stripe signature
+                        .pathMatchers("/api/v1/payments/webhook").permitAll()
+                        // Everything else requires a valid JWT
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

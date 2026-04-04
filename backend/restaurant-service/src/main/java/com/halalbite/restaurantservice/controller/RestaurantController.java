@@ -11,30 +11,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
-/**
- * Restaurant Controller
- *
- * Endpoints:
- *   POST   /api/v1/restaurants              → register restaurant (RESTAURANT_OWNER)
- *   GET    /api/v1/restaurants              → list active restaurants (PUBLIC)
- *   GET    /api/v1/restaurants/search       → search restaurants (PUBLIC)
- *   GET    /api/v1/restaurants/my           → get owner's own restaurant
- *   GET    /api/v1/restaurants/{id}         → get restaurant by ID (PUBLIC)
- *   PATCH  /api/v1/restaurants/{id}         → update restaurant (OWNER only)
- *   PATCH  /api/v1/restaurants/{id}/status  → update status (ADMIN only)
- *
- * Role checking:
- * @PreAuthorize reads the "roles" claim from the Keycloak JWT token.
- * Keycloak must be configured to include roles in the token.
- * We'll set this up in Keycloak when we configure the realm.
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/restaurants")
@@ -52,17 +35,15 @@ public class RestaurantController {
             @Valid @RequestBody RestaurantDto.CreateRestaurantRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String ownerKeycloakId = jwt.getSubject();
-        log.info("POST /api/v1/restaurants — owner: {}", ownerKeycloakId);
-        RestaurantDto.RestaurantResponse response =
-            restaurantService.createRestaurant(request, ownerKeycloakId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        String ownerUserId = jwt.getSubject();
+        log.info("POST /api/v1/restaurants — owner: {}", ownerUserId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(restaurantService.createRestaurant(request, ownerUserId));
     }
 
     /**
      * GET /api/v1/restaurants
-     * List all active restaurants — public, paginated.
-     * Example: GET /api/v1/restaurants?page=0&size=20&sort=name
+     * List all active restaurants — PUBLIC, paginated.
      */
     @GetMapping
     public ResponseEntity<Page<RestaurantDto.RestaurantSummaryResponse>> getAllRestaurants(
@@ -71,14 +52,12 @@ public class RestaurantController {
             @RequestParam(defaultValue = "name") String sortBy) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
-        return ResponseEntity.ok(
-            restaurantService.getAllActiveRestaurants(pageable)
-        );
+        return ResponseEntity.ok(restaurantService.getAllActiveRestaurants(pageable));
     }
 
     /**
-     * GET /api/v1/restaurants/search?query=halal&page=0&size=20
-     * Search restaurants by name or cuisine type — public.
+     * GET /api/v1/restaurants/search?query=halal
+     * Search restaurants — PUBLIC.
      */
     @GetMapping("/search")
     public ResponseEntity<Page<RestaurantDto.RestaurantSummaryResponse>> searchRestaurants(
@@ -87,27 +66,27 @@ public class RestaurantController {
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(
-            restaurantService.searchRestaurants(query, pageable)
-        );
+        return ResponseEntity.ok(restaurantService.searchRestaurants(query, pageable));
     }
 
     /**
-     * GET /api/v1/restaurants/my
-     * Get the restaurant belonging to the authenticated owner.
+     * GET /api/v1/restaurants/owner
+     * Get all restaurants owned by the authenticated user.
+     * Returns a List — frontend checks restaurants[0] to get the first restaurant.
+     * The Angular dashboard calls this on startup.
      */
-    @GetMapping("/my")
-    public ResponseEntity<RestaurantDto.RestaurantResponse> getMyRestaurant(
+    @GetMapping("/owner")
+    public ResponseEntity<List<RestaurantDto.RestaurantResponse>> getMyRestaurants(
             @AuthenticationPrincipal Jwt jwt) {
 
-        return ResponseEntity.ok(
-            restaurantService.getMyRestaurant(jwt.getSubject())
-        );
+        String ownerUserId = jwt.getSubject();
+        log.info("GET /api/v1/restaurants/owner — userId: {}", ownerUserId);
+        return ResponseEntity.ok(restaurantService.getRestaurantsByOwner(ownerUserId));
     }
 
     /**
      * GET /api/v1/restaurants/{id}
-     * Get a single restaurant by ID — public.
+     * Get a single restaurant by ID — PUBLIC.
      */
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantDto.RestaurantResponse> getRestaurantById(
@@ -119,7 +98,6 @@ public class RestaurantController {
     /**
      * PATCH /api/v1/restaurants/{id}
      * Update restaurant profile — owner only.
-     * Service layer verifies the JWT owner matches the restaurant owner.
      */
     @PatchMapping("/{id}")
     public ResponseEntity<RestaurantDto.RestaurantResponse> updateRestaurant(
@@ -128,17 +106,15 @@ public class RestaurantController {
             @AuthenticationPrincipal Jwt jwt) {
 
         return ResponseEntity.ok(
-            restaurantService.updateRestaurant(id, request, jwt.getSubject())
+                restaurantService.updateRestaurant(id, request, jwt.getSubject())
         );
     }
 
     /**
      * PATCH /api/v1/restaurants/{id}/status
      * Update restaurant status — ADMIN only.
-     * TODO: Uncomment @PreAuthorize once Keycloak realm roles are configured.
      */
     @PatchMapping("/{id}/status")
-    // @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RestaurantDto.RestaurantResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody RestaurantDto.UpdateStatusRequest request) {

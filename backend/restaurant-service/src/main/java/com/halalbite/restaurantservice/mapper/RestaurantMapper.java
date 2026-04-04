@@ -19,7 +19,7 @@ public interface RestaurantMapper {
     RestaurantDto.OperatingHoursResponse toOperatingHoursResponse(OperatingHours hours);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "ownerKeycloakId", ignore = true)
+    @Mapping(target = "ownerUserId", ignore = true)
     @Mapping(target = "averageRating", ignore = true)
     @Mapping(target = "totalReviews", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -29,7 +29,7 @@ public interface RestaurantMapper {
     Restaurant toEntity(RestaurantDto.CreateRestaurantRequest request);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "ownerKeycloakId", ignore = true)
+    @Mapping(target = "ownerUserId", ignore = true)
     @Mapping(target = "averageRating", ignore = true)
     @Mapping(target = "totalReviews", ignore = true)
     @Mapping(target = "status", ignore = true)

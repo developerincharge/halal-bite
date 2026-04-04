@@ -53,13 +53,13 @@ class UserServiceTest {
     private User testUser;
     private UserDto.CreateUserRequest createRequest;
     private UserDto.UserResponse userResponse;
-    private final String TEST_KEYCLOAK_ID = "keycloak-test-id-123";
+    private final String TEST_USER_ID = "user-test-id-123";
 
     @BeforeEach
     void setUp() {
         testUser = User.builder()
             .id(UUID.randomUUID())
-            .keycloakId(TEST_KEYCLOAK_ID)
+            .userId(TEST_USER_ID)
             .firstName("John")
             .lastName("Doe")
             .email("john.doe@example.com")
@@ -84,14 +84,14 @@ class UserServiceTest {
     @DisplayName("createUser — should create new user profile successfully")
     void createUser_success() {
         // Arrange
-        when(userRepository.findByKeycloakId(TEST_KEYCLOAK_ID)).thenReturn(Optional.empty());
+        when(userRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
         when(userRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
         when(userMapper.toEntity(createRequest)).thenReturn(testUser);
         when(userRepository.save(any(User.class))).thenReturn(testUser);
         when(userMapper.toResponse(testUser)).thenReturn(userResponse);
 
         // Act
-        UserDto.UserResponse result = userService.createUser(createRequest, TEST_KEYCLOAK_ID);
+        UserDto.UserResponse result = userService.createUser(createRequest, TEST_USER_ID);
 
         // Assert
         assertThat(result).isNotNull();
@@ -103,11 +103,11 @@ class UserServiceTest {
     @DisplayName("createUser — should return existing profile if already created")
     void createUser_alreadyExists_returnsExisting() {
         // Arrange — user already exists
-        when(userRepository.findByKeycloakId(TEST_KEYCLOAK_ID)).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(testUser));
         when(userMapper.toResponse(testUser)).thenReturn(userResponse);
 
         // Act
-        UserDto.UserResponse result = userService.createUser(createRequest, TEST_KEYCLOAK_ID);
+        UserDto.UserResponse result = userService.createUser(createRequest, TEST_USER_ID);
 
         // Assert — save should NEVER be called if user exists
         assertThat(result).isNotNull();
@@ -115,15 +115,15 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("getCurrentUser — should return user profile for valid keycloakId")
+    @DisplayName("getCurrentUser — should return user profile for valid UserId")
     void getCurrentUser_success() {
         // Arrange
-        when(userRepository.findByKeycloakIdAndIsActiveTrue(TEST_KEYCLOAK_ID))
+        when(userRepository.findByUserIdAndIsActiveTrue(TEST_USER_ID))
             .thenReturn(Optional.of(testUser));
         when(userMapper.toResponse(testUser)).thenReturn(userResponse);
 
         // Act
-        UserDto.UserResponse result = userService.getCurrentUser(TEST_KEYCLOAK_ID);
+        UserDto.UserResponse result = userService.getCurrentUser(TEST_USER_ID);
 
         // Assert
         assertThat(result).isNotNull();
@@ -134,11 +134,11 @@ class UserServiceTest {
     @DisplayName("getCurrentUser — should throw exception when user not found")
     void getCurrentUser_notFound_throwsException() {
         // Arrange
-        when(userRepository.findByKeycloakIdAndIsActiveTrue(TEST_KEYCLOAK_ID))
+        when(userRepository.findByUserIdAndIsActiveTrue(TEST_USER_ID))
             .thenReturn(Optional.empty());
 
         // Act + Assert — verify the exception is thrown
-        assertThatThrownBy(() -> userService.getCurrentUser(TEST_KEYCLOAK_ID))
+        assertThatThrownBy(() -> userService.getCurrentUser(TEST_USER_ID))
             .isInstanceOf(RuntimeException.class)
             .hasMessageContaining("Active user not found");
     }
@@ -147,12 +147,12 @@ class UserServiceTest {
     @DisplayName("deactivateCurrentUser — should set isActive to false")
     void deactivateCurrentUser_success() {
         // Arrange
-        when(userRepository.findByKeycloakIdAndIsActiveTrue(TEST_KEYCLOAK_ID))
+        when(userRepository.findByUserIdAndIsActiveTrue(TEST_USER_ID))
             .thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenReturn(testUser);
 
         // Act
-        userService.deactivateCurrentUser(TEST_KEYCLOAK_ID);
+        userService.deactivateCurrentUser(TEST_USER_ID);
 
         // Assert — verify save was called and isActive was set to false
         verify(userRepository, times(1)).save(argThat(user -> !user.getIsActive()));

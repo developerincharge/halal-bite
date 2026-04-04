@@ -22,21 +22,9 @@ import java.util.stream.Collectors;
 /**
  * Restaurant Service — business logic layer
  *
- * Key concepts demonstrated here:
- *
- * 1. Role-based access control in the service layer
- *    We check if the authenticated user owns this restaurant
- *    before allowing any modification. This is defence in depth —
- *    even if the gateway or controller is bypassed somehow,
- *    the service still enforces ownership.
- *
- * 2. Pagination for list endpoints
- *    getAllActiveRestaurants() returns Page<> not List<>
- *    This prevents loading thousands of restaurants into memory.
- *
- * 3. Status transition logic
- *    Only admins can change status. The service validates that
- *    the transition makes sense (can't go from CLOSED → ACTIVE).
+ * ownerUserId = the JWT subject from auth-service.
+ * Every method that modifies a restaurant verifies the caller
+ * owns that restaurant before allowing the change.
  */
 @Slf4j
 @Service
@@ -48,26 +36,27 @@ public class RestaurantService {
 
     /**
      * Register a new restaurant.
-     * Called by RESTAURANT_OWNER after they sign up.
+     * Called by RESTAURANT_OWNER after signing up.
      * Status starts as PENDING — admin must approve before customers see it.
      */
     @Transactional
     public RestaurantDto.RestaurantResponse createRestaurant(
             RestaurantDto.CreateRestaurantRequest request,
-            String ownerKeycloakId) {
+            String ownerUserId) {
 
-        log.info("Creating restaurant for owner: {}", ownerKeycloakId);
+        log.info("Creating restaurant for owner: {}", ownerUserId);
 
-        // One owner = one restaurant for now
-        // TODO: Allow multiple restaurants per owner in a future version
-        if (restaurantRepository.existsByOwnerKeycloakId(ownerKeycloakId)) {
+        if (restaurantRepository.existsByOwnerUserId(ownerUserId)) {
             throw new RestaurantExceptions.RestaurantAlreadyExistsException(
                 "You already have a restaurant registered. Contact support to register another."
             );
         }
 
         Restaurant restaurant = restaurantMapper.toEntity(request);
-        // Set defaults explicitly — MapStruct bypasses @Builder.Default
+        restaurant.setOwnerUserId(ownerUserId);
+        restaurant.setStatus(RestaurantStatus.PENDING);
+
+        // Set defaults manually — MapStruct bypasses @Builder.Default
         if (restaurant.getAffiliateRevenuePercentage() == null) {
             restaurant.setAffiliateRevenuePercentage(new BigDecimal("0.15"));
         }
@@ -83,17 +72,8 @@ public class RestaurantService {
         if (restaurant.getTotalReviews() == null) {
             restaurant.setTotalReviews(0);
         }
-        restaurant.setOwnerKeycloakId(ownerKeycloakId);
-        restaurant.setStatus(RestaurantStatus.PENDING);
 
-        // Set affiliate revenue percentage — use request value or default 15%
-        if (request.getAffiliateRevenuePercentage() != null) {
-            restaurant.setAffiliateRevenuePercentage(
-                request.getAffiliateRevenuePercentage()
-            );
-        }
-
-        // Add operating hours if provided
+        // Add operating hours if provided in request
         if (request.getOperatingHours() != null) {
             List<OperatingHours> hours = request.getOperatingHours().stream()
                 .map(h -> OperatingHours.builder()
@@ -108,34 +88,48 @@ public class RestaurantService {
         }
 
         Restaurant saved = restaurantRepository.save(restaurant);
-        log.info("Restaurant created with id: {} status: PENDING", saved.getId());
+        log.info("Restaurant created: {} status: PENDING", saved.getId());
         return restaurantMapper.toResponse(saved);
     }
 
     /**
-     * Get a restaurant by ID — public endpoint, anyone can view.
+     * Get a restaurant by ID — public, anyone can view.
      */
     @Transactional(readOnly = true)
     public RestaurantDto.RestaurantResponse getRestaurantById(UUID id) {
-        Restaurant restaurant = findById(id);
-        return restaurantMapper.toResponse(restaurant);
+        return restaurantMapper.toResponse(findById(id));
     }
 
     /**
-     * Get the restaurant owned by the currently authenticated user.
+     * Get all restaurants owned by this user.
+     * Returns a List — the Angular dashboard uses restaurants[0].
+     * Called by GET /api/v1/restaurants/owner
      */
     @Transactional(readOnly = true)
-    public RestaurantDto.RestaurantResponse getMyRestaurant(String ownerKeycloakId) {
-        Restaurant restaurant = restaurantRepository
-            .findByOwnerKeycloakId(ownerKeycloakId)
+    public List<RestaurantDto.RestaurantResponse> getRestaurantsByOwner(String ownerUserId) {
+        log.debug("Fetching restaurants for owner: {}", ownerUserId);
+        return restaurantRepository.findByOwnerUserId(ownerUserId)
+            .stream()
+            .map(restaurantMapper::toResponse)
+            .toList();
+    }
+
+    /**
+     * Get the single restaurant owned by this user.
+     * Called by GET /api/v1/restaurants/my (legacy endpoint — kept for compatibility)
+     */
+    @Transactional(readOnly = true)
+    public RestaurantDto.RestaurantResponse getMyRestaurant(String ownerUserId) {
+        log.debug("Fetching restaurant for owner: {}", ownerUserId);
+        return restaurantRepository.findFirstByOwnerUserId(ownerUserId)
+            .map(restaurantMapper::toResponse)
             .orElseThrow(() -> new RestaurantExceptions.RestaurantNotFoundException(
                 "No restaurant found for this account"
             ));
-        return restaurantMapper.toResponse(restaurant);
     }
 
     /**
-     * Get all active restaurants — paginated, for customer browsing.
+     * Get all active restaurants — paginated for customer browsing.
      */
     @Transactional(readOnly = true)
     public Page<RestaurantDto.RestaurantSummaryResponse> getAllActiveRestaurants(
@@ -158,18 +152,18 @@ public class RestaurantService {
 
     /**
      * Update restaurant profile — owner only.
+     * Verifies the caller owns the restaurant before updating.
      */
     @Transactional
     public RestaurantDto.RestaurantResponse updateRestaurant(
             UUID id,
             RestaurantDto.UpdateRestaurantRequest request,
-            String ownerKeycloakId) {
+            String ownerUserId) {
 
         Restaurant restaurant = findById(id);
-        verifyOwnership(restaurant, ownerKeycloakId);
+        verifyOwnership(restaurant, ownerUserId);
         restaurantMapper.updateEntityFromRequest(request, restaurant);
 
-        // Update operating hours if provided
         if (request.getOperatingHours() != null) {
             restaurant.getOperatingHours().clear();
             List<OperatingHours> hours = request.getOperatingHours().stream()
@@ -189,7 +183,6 @@ public class RestaurantService {
 
     /**
      * Update restaurant status — ADMIN only.
-     * The controller enforces the ADMIN role — service enforces business rules.
      */
     @Transactional
     public RestaurantDto.RestaurantResponse updateStatus(
@@ -198,7 +191,6 @@ public class RestaurantService {
 
         Restaurant restaurant = findById(id);
 
-        // Validate status transition
         if (restaurant.getStatus() == RestaurantStatus.CLOSED) {
             throw new RestaurantExceptions.InvalidStatusTransitionException(
                 "Cannot change status of a permanently closed restaurant"
@@ -212,7 +204,9 @@ public class RestaurantService {
         return restaurantMapper.toResponse(restaurantRepository.save(restaurant));
     }
 
-    // ---- Private helpers ----
+    // =====================================================
+    // Private helpers
+    // =====================================================
 
     private Restaurant findById(UUID id) {
         return restaurantRepository.findById(id)
@@ -221,8 +215,8 @@ public class RestaurantService {
             ));
     }
 
-    private void verifyOwnership(Restaurant restaurant, String keycloakId) {
-        if (!restaurant.getOwnerKeycloakId().equals(keycloakId)) {
+    private void verifyOwnership(Restaurant restaurant, String ownerUserId) {
+        if (!restaurant.getOwnerUserId().equals(ownerUserId)) {
             throw new RestaurantExceptions.UnauthorizedRestaurantAccessException(
                 "You do not have permission to modify this restaurant"
             );
