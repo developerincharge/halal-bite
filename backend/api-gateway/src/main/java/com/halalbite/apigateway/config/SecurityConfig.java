@@ -60,9 +60,10 @@ public class SecurityConfig {
 
         // Allow Angular dev server and production domains
         config.setAllowedOrigins(List.of(
-                "http://localhost:4200",   // Angular dev server
-                "http://localhost:3000",   // React dev server (for future customer app)
-                "http://localhost:4201"    // Admin portal
+                "http://localhost:4200",   // Angular restaurant dashboard
+                "http://localhost:4201",   // Admin portal
+                "http://localhost:8088",   // Customer app web ← ADD THIS
+                "http://localhost:3000"    // Future use
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

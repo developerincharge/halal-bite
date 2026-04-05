@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Halal Bite",
+    "slug": "halal-bite-customer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.halalbite.customer"
+    },
+    "android": {
+      "package": "com.halalbite.customer"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "scheme": "halalbite"
+  }
+}
