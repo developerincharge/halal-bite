@@ -1,10 +1,14 @@
 package com.halalbite.paymentservice.service;
 
 import com.halalbite.paymentservice.dto.PaymentDto;
+import com.halalbite.paymentservice.entity.Payment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Kafka Consumer — listens to "order.placed" topic
@@ -32,14 +36,14 @@ public class OrderPlacedKafkaConsumer {
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void handleOrderPlaced(PaymentDto.OrderPlacedEvent event) {
-        log.info("Received order.placed event for order: {} amount: ${}",
-                event.getOrderId(), event.getTotalAmount());
+        log.info("Received order.placed event for order: {}", event.getOrderId());
 
         try {
+            // Service handles the duplicate check internally
             paymentService.initiatePayment(
                     event.getOrderId(),
                     event.getTotalAmount(),
-                    event.getCustomerId()  // ← pass customerId from event
+                    event.getCustomerId()
             );
             log.info("Payment initiated for order: {}", event.getOrderId());
         } catch (Exception e) {

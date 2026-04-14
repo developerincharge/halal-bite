@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -32,7 +33,8 @@ import java.util.UUID;
  *    c. Create an OrderLineItem with snapshotted price
  * 2. Calculate subtotal, platform fee, and total
  * 3. Save order to database
- * 4. Publish "order.placed" event to Kafka
+ * 4  kafkaTemplate injected via constructor injection (thanks to @RequiredArgsConstructor)
+ * 5. Publish "order.placed" event to Kafka
  *    → payment-service listens and creates a Stripe payment intent
  *    → notification-service listens and sends confirmation email
  *
@@ -54,6 +56,8 @@ public class OrderService {
     private final OrderMapper orderMapper;
 
     /**
+     *
+     *
      * Place a new order.
      * Validates all items, calculates totals, saves, and publishes Kafka event.
      */
@@ -270,6 +274,75 @@ public class OrderService {
             throw new OrderExceptions.InvalidOrderStatusException(
                 "Invalid status transition: " + current + " → " + next
             );
+        }
+    }
+
+    /**
+     * Called when payment.succeeded Kafka event is received.
+     * Moves order from PENDING → CONFIRMED.
+     */
+    @Transactional
+    public void confirmOrder(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Order not found: " + orderId));
+
+        if (order.getStatus() == OrderStatus.CONFIRMED) {
+            log.info("Order {} already CONFIRMED — skipping", orderId);
+            return;
+        }
+
+        log.info("Confirming order {} — status: {} → CONFIRMED",
+                orderId, order.getStatus());
+
+        order.setStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(order);
+
+        // Publish order.status.updated so restaurant dashboard and
+        // notification-service know the order is confirmed
+        publishStatusUpdated(order);
+    }
+
+    /**
+     * Called when payment.failed Kafka event is received.
+     * Moves order from PENDING → CANCELLED.
+     */
+    @Transactional
+    public void cancelOrder(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Order not found: " + orderId));
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            log.info("Order {} already CANCELLED — skipping", orderId);
+            return;
+        }
+
+        log.info("Cancelling order {} — status: {} → CANCELLED",
+                orderId, order.getStatus());
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        publishStatusUpdated(order);
+    }
+
+    /**
+     * Publish order.status.updated to Kafka.
+     * Consumed by notification-service and restaurant dashboard.
+     */
+    private void publishStatusUpdated(Order order) {
+        try {
+            kafkaTemplate.send("order.status.updated", Map.of(
+                    "orderId",      order.getId().toString(),
+                    "customerId",   order.getCustomerId().toString(),
+                    "restaurantId", order.getRestaurantId().toString(),
+                    "status",       order.getStatus().toString(),
+                    "timestamp",    LocalDateTime.now().toString()
+            ));
+            log.info("Published order.status.updated for order: {} status: {}",
+                    order.getId(), order.getStatus());
+        } catch (Exception e) {
+            log.error("Failed to publish order.status.updated: {}", e.getMessage());
         }
     }
 

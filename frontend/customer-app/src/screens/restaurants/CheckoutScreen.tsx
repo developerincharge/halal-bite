@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator
 } from 'react-native';
-import { orderApi } from '../../services/api';
+import api, { orderApi } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 
 const DELIVERY_FEE = 2.99;
@@ -46,23 +46,65 @@ export default function CheckoutScreen({ navigation }: any) {
         specialInstructions,
       });
 
+          // Step 2 — initiate PayPal payment
+    const { data: payment } = await api.post('/payments/initiate', {
+      orderId: order.id,
+      amount: order.totalAmount,
+    });
+      // For simplicity, we'll just open the PayPal approval URL in the browser
+      // In a real app, you'd want to use a WebView and handle the redirect back to the app
+      const approvalUrl = payment.links.find((link: any) => link.rel === 'approve')?.href;
+      if (approvalUrl) {
+        // Open PayPal approval URL
+        // In React Native, you can use Linking.openURL(approvalUrl);
+        Alert.alert(
+          'Payment Required',
+          'You will be redirected to PayPal to complete your payment.',
+          [{
+            text: 'Proceed to PayPal',
+            onPress: () => {
+              // Open the approval URL in the browser
+              // After payment, PayPal will redirect back to the app with a success URL
+              // You would need to handle that URL and confirm the payment on the backend
+              // For this example, we'll assume payment is successful after redirection
+              navigation.navigate('PaymentProcessing', { orderId: order.id });
+            },
+          }]
+        );
+      } else {
+        Alert.alert('Payment Error', 'Failed to initiate payment. Please try again.');
+        return;
+      } 
+
       clearCart();
 
+          // Step 3 — open PayPal approval URL in browser
+    if (payment.approvalUrl) {
       Alert.alert(
-        '🎉 Order Placed!',
-        `Your order #${order.id.slice(-8).toUpperCase()} has been placed successfully. You'll receive a confirmation shortly.`,
-        [{
-          text: 'Track Order',
-          onPress: () => navigation.navigate('OrderDetail', { orderId: order.id }),
-        }]
+        '🛒 Complete Payment',
+        'You will be redirected to PayPal to complete your payment.',
+        [
+          {
+            text: 'Pay with PayPal',
+            onPress: () => {
+              // Open PayPal in browser
+              import('react-native').then(({ Linking }) => {
+                Linking.openURL(payment.approvalUrl);
+              });
+              // Navigate to orders so user can track
+              navigation.navigate('Orders');
+            },
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
       );
-    } catch (err: any) {
-      const message = err.response?.data?.message ?? 'Failed to place order. Please try again.';
-      Alert.alert('Order Failed', message);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err: any) {
+    Alert.alert('Error', err.response?.data?.message ?? 'Failed to place order');
+  } finally {
+    setLoading(false);
+  }
+};
 
 return (
   <View style={styles.container}>

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -37,9 +38,19 @@ public class PaymentService {
     public PaymentDto.PaymentResponse initiatePayment(
             String orderId,
             BigDecimal amount,
-            String customerId) {  // ← add parameter
+            String customerId) {
 
-        log.info("Initiating PayPal payment for order: {} customer: {}", orderId, customerId);
+        log.info("Initiating PayPal payment for order: {}", orderId);
+
+        // Duplicate guard — Kafka can redeliver, frontend may also call this
+        Optional<Payment> existing = paymentRepository
+                .findByOrderId(UUID.fromString(orderId));
+
+        if (existing.isPresent()) {
+            log.info("Payment already exists for order: {} status: {} — returning existing",
+                    orderId, existing.get().getStatus());
+            return toResponse(existing.get());
+        }
 
         try {
             String returnUrl = frontendUrl + "/payment/success?orderId=" + orderId;
@@ -56,7 +67,7 @@ public class PaymentService {
 
             Payment payment = Payment.builder()
                     .orderId(UUID.fromString(orderId))
-                    .customerId(UUID.fromString(customerId))  // ← add this
+                    .customerId(customerId != null ? UUID.fromString(customerId) : null)
                     .amount(amount)
                     .currency("USD")
                     .status(PaymentStatus.PENDING)
