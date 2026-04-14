@@ -1,7 +1,11 @@
 package com.halalbite.paymentservice.dto;
 
 import com.halalbite.paymentservice.entity.PaymentStatus;
-import lombok.*;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,76 +13,52 @@ import java.util.UUID;
 
 public class PaymentDto {
 
-    // =====================================================
-    // RESPONSE DTOs
-    // =====================================================
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderPlacedEvent {
+        private String orderId;
+        private BigDecimal totalAmount;
+        private String customerId;
+        private String restaurantId;
+    }
 
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class PaymentResponse {
         private UUID id;
         private UUID orderId;
-        private UUID customerId;
-        private BigDecimal totalAmount;
-        private BigDecimal platformFeeAmount;
-        private BigDecimal restaurantAmount;
+        private BigDecimal amount;
+        private String currency;
         private PaymentStatus status;
-        // clientSecret is sent to the frontend to complete payment with Stripe.js
-        // Never log or expose this unnecessarily
-        private String clientSecret;
-        private LocalDateTime paidAt;
+        private String approvalUrl;
+        private String paypalPaymentId;
         private LocalDateTime createdAt;
     }
 
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class PaymentSummaryResponse {
         private UUID id;
         private UUID orderId;
-        private BigDecimal totalAmount;
+        private BigDecimal amount;
         private PaymentStatus status;
         private LocalDateTime createdAt;
     }
 
-    // =====================================================
-    // KAFKA EVENT DTOs — consumed from order-service
-    // =====================================================
 
-    // Consumed from "order.placed" topic — triggers payment creation
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
-    public static class OrderPlacedEvent {
-        private UUID orderId;
-        private UUID customerId;
-        private UUID restaurantId;
-        private BigDecimal totalAmount;
-        private BigDecimal platformFeeAmount;
-        private String customerEmail;
-        private LocalDateTime createdAt;
-    }
 
-    // =====================================================
-    // KAFKA EVENT DTOs — published by payment-service
-    // =====================================================
-
-    // Published to "payment.succeeded" — order-service updates to CONFIRMED
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
-    public static class PaymentSucceededEvent {
-        private UUID paymentId;
-        private UUID orderId;
-        private UUID customerId;
-        private UUID restaurantId;
-        private BigDecimal totalAmount;
-        private BigDecimal platformFeeAmount;
-        private BigDecimal restaurantAmount;
-        private String stripePaymentIntentId;
-        private LocalDateTime paidAt;
-    }
-
-    // Published to "payment.failed" — order-service updates to CANCELLED
-    @Data @Builder @NoArgsConstructor @AllArgsConstructor
-    public static class PaymentFailedEvent {
-        private UUID paymentId;
-        private UUID orderId;
-        private UUID customerId;
-        private String failureReason;
-        private LocalDateTime failedAt;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InitiateRequest {
+        private String orderId;
+        private BigDecimal amount;
+        private String customerId;
     }
 }

@@ -14,7 +14,9 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByOrderId(UUID orderId);
 
-    Optional<Payment> findByStripePaymentIntentId(String stripePaymentIntentId);
+    Optional<Payment> findByPaypalPaymentId(String paypalPaymentId);
+
+    List<Payment> findByCustomerId(UUID customerId);
 
     List<Payment> findByCustomerIdOrderByCreatedAtDesc(UUID customerId);
 

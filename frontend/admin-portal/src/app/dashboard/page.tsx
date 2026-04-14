@@ -34,6 +34,18 @@ export default function DashboardPage() {
     { label: 'Suspended',         value: suspended.length,   icon: '🚫', color: 'bg-red-50 text-red-600' },
   ];
 
+const formatDate = (dateVal: any): string => {
+  if (!dateVal) return '—';
+  // Java LocalDateTime comes as array: [2026, 4, 2, 15, 54, 35]
+  if (Array.isArray(dateVal)) {
+    const [year, month, day] = dateVal;
+    return new Date(year, month - 1, day).toLocaleDateString();
+  }
+  // String format fallback
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+};
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -95,7 +107,7 @@ export default function DashboardPage() {
                   <td className="table-td text-[#f4a261]">{r.cuisineType}</td>
                   <td className="table-td">{r.city}</td>
                   <td className="table-td text-gray-400">
-                    {new Date(r.createdAt).toLocaleDateString()}
+                    {formatDate(r.createdAt)}
                   </td>
                   <td className="table-td">
                     <Link

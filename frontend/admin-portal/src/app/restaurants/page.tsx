@@ -14,7 +14,7 @@ const tabs: { label: string; status: RestaurantStatus | 'ALL' }[] = [
 ];
 
 export default function RestaurantsPage() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [restaurants, setRestaurants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<RestaurantStatus | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
@@ -42,6 +42,18 @@ export default function RestaurantsPage() {
 
   const countByStatus = (status: RestaurantStatus) =>
     restaurants.filter(r => r.status === status).length;
+
+   const formatDate = (dateVal: any): string => {
+     if (!dateVal) return '—';
+     // Java LocalDateTime comes as array: [2026, 4, 2, 15, 54, 35]
+     if (Array.isArray(dateVal)) {
+       const [year, month, day] = dateVal;
+       return new Date(year, month - 1, day).toLocaleDateString();
+     }
+     // String format fallback
+     const d = new Date(dateVal);
+     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+   };
 
   return (
     <div className="p-8">
@@ -111,7 +123,7 @@ export default function RestaurantsPage() {
                            : '15%'}
                        </td>
                        <td className="table-td text-gray-400 text-xs">
-                         {new Date(r.createdAt).toLocaleDateString()}
+                         {formatDate(r.createdAt)}
                        </td>
                        <td className="table-td">
                          <Link

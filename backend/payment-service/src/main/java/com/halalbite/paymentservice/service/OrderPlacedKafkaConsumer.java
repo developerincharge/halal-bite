@@ -27,20 +27,23 @@ public class OrderPlacedKafkaConsumer {
     private final PaymentService paymentService;
 
     @KafkaListener(
-        topics = "order.placed",
-        groupId = "payment-service",
-        containerFactory = "kafkaListenerContainerFactory"
+            topics = "order.placed",
+            groupId = "payment-service",
+            containerFactory = "kafkaListenerContainerFactory"
     )
     public void handleOrderPlaced(PaymentDto.OrderPlacedEvent event) {
         log.info("Received order.placed event for order: {} amount: ${}",
-            event.getOrderId(), event.getTotalAmount());
+                event.getOrderId(), event.getTotalAmount());
 
         try {
-            paymentService.createPayment(event);
-            log.info("Payment created for order: {}", event.getOrderId());
+            paymentService.initiatePayment(
+                    event.getOrderId(),
+                    event.getTotalAmount(),
+                    event.getCustomerId()  // ← pass customerId from event
+            );
+            log.info("Payment initiated for order: {}", event.getOrderId());
         } catch (Exception e) {
-            log.error("Failed to create payment for order: {}", event.getOrderId(), e);
-            // TODO: Send to dead letter queue for retry
+            log.error("Failed to initiate payment for order: {}", event.getOrderId(), e);
         }
     }
 }

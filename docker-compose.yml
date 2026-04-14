@@ -37,8 +37,8 @@ services:
       - halal-bite-network
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-halalbiteuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-halalbitepass}
+      POSTGRES_USER: halalbiteuser
+      POSTGRES_PASSWORD: halalbitepass
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"

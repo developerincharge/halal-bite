@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
+import com.halalbite.paymentservice.entity.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -42,42 +42,47 @@ public class Payment {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "order_id", unique = true, nullable = false)
+    @Column(name = "amount", precision = 10, scale = 2)
+    private BigDecimal amount;
+
+    @Column(name = "currency", length = 3)
+    @Builder.Default
+    private String currency = "USD";
+
+    @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
-    @Column(name = "customer_id", nullable = false)
+    @Column(name = "customer_id")
     private UUID customerId;
 
-    @Column(name = "restaurant_id", nullable = false)
+    @Column(name = "restaurant_id")
     private UUID restaurantId;
 
-    // Stripe references
-    @Column(name = "stripe_payment_intent_id", unique = true)
-    private String stripePaymentIntentId;
+    @Column(name = "paypal_payment_id")
+    private String paypalPaymentId;
 
-    @Column(name = "stripe_client_secret")
-    private String stripeClientSecret;  // Sent to frontend to complete payment
+    @Column(name = "paypal_payer_id")
+    private String paypalPayerId;
 
-    @Column(name = "stripe_transfer_group")
-    private String stripeTransferGroup;
-
-    // Financial amounts — all in USD
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalAmount;
-
-    @Column(name = "platform_fee_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal platformFeeAmount;
-
-    @Column(name = "restaurant_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal restaurantAmount;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    @Builder.Default
-    private PaymentStatus status = PaymentStatus.PENDING;
+    @Column(name = "approval_url", length = 1000)
+    private String approvalUrl;
 
     @Column(name = "failure_reason")
     private String failureReason;
+
+    @Column(name = "restaurant_amount", precision = 10, scale = 2)
+    private BigDecimal restaurantAmount;
+
+    @Column(name = "total_amount", precision = 10, scale = 2)
+    private BigDecimal totalAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private PaymentStatus status = PaymentStatus.PENDING;
+
+    @Column(name = "platform_fee_amount", precision = 10, scale = 2)
+    private BigDecimal platformFeeAmount;
 
     // Set when payment is confirmed
     @Column(name = "paid_at")

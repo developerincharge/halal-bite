@@ -154,7 +154,17 @@ export default function RestaurantDetailPage({ params }: { params: { id: string 
               { label: 'Average Rating', value: restaurant.totalReviews > 0 ? `⭐ ${restaurant.averageRating?.toFixed(1)}` : 'No reviews yet' },
               { label: 'Total Reviews', value: restaurant.totalReviews?.toString() ?? '0' },
               { label: 'Owner ID', value: restaurant.ownerUserId?.slice(-12) ?? '—' },
-              { label: 'Registered', value: new Date(restaurant.createdAt).toLocaleDateString() },
+              { label: 'Registered', value: (() => {
+                  const d = restaurant.createdAt;
+                  if (!d) return '—';
+                  if (Array.isArray(d)) {
+                    const [y, m, day] = d as any[];
+                    return new Date(y, m - 1, day).toLocaleDateString();
+                  }
+                  const parsed = new Date(d);
+                  return isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString();
+                })()
+              },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between py-1 border-b border-gray-50 last:border-0">
                 <dt className="text-sm text-gray-500">{label}</dt>

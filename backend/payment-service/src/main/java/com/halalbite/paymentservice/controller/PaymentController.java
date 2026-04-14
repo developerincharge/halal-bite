@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -98,55 +99,52 @@ public class PaymentController {
         log.info("Simulating payment failure for order: {}", orderId);
         return ResponseEntity.ok(paymentService.simulatePaymentFailure(orderId, reason));
     }
-
     /**
-     * POST /api/v1/payments/webhook
-     * Real Stripe webhook endpoint — no JWT auth, uses Stripe signature verification.
-     * Stripe calls this URL when a payment event occurs.
-     *
-     * In production: configure this URL in your Stripe dashboard:
-     * https://your-domain.com/api/v1/payments/webhook
-     *
-     * For local dev: use Stripe CLI to forward webhooks:
-     * stripe listen --forward-to localhost:8080/api/v1/payments/webhook
+     * POST /api/v1/payments/initiate
+     * Frontend calls this after order is placed to get PayPal approval URL
      */
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleStripeWebhook(
-            @RequestBody String payload,
-            @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader) {
+    @PostMapping("/initiate")
+    public ResponseEntity<PaymentDto.PaymentResponse> initiatePayment(
+            @RequestBody PaymentDto.InitiateRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
 
-        log.info("Stripe webhook received");
+        // Extract customerId from JWT subject
+        request.setCustomerId(jwt.getSubject());
 
-        // TODO: Verify Stripe signature in production
-        // String webhookSecret = stripeWebhookSecret;
-        // Event event = Webhook.constructEvent(payload, sigHeader, webhookSecret);
-
-        // For now parse the event type from payload manually
-        // In production use Stripe's Webhook.constructEvent()
-        try {
-            if (payload.contains("payment_intent.succeeded")) {
-                String intentId = extractPaymentIntentId(payload);
-                if (intentId != null) {
-                    paymentService.handleStripeWebhook(intentId, "payment_intent.succeeded");
-                }
-            } else if (payload.contains("payment_intent.payment_failed")) {
-                String intentId = extractPaymentIntentId(payload);
-                if (intentId != null) {
-                    paymentService.handleStripeWebhook(intentId, "payment_intent.payment_failed");
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error processing Stripe webhook", e);
-        }
-
-        return ResponseEntity.ok("received");
+        return ResponseEntity.ok(
+                paymentService.initiatePayment(
+                        request.getOrderId(),
+                        request.getAmount(),
+                        request.getCustomerId()
+                )
+        );
     }
 
-    private String extractPaymentIntentId(String payload) {
-        // Simple extraction — production should use Stripe SDK's Event object
-        int idx = payload.indexOf("\"pi_");
-        if (idx == -1) return null;
-        int end = payload.indexOf("\"", idx + 1);
-        return end > idx ? payload.substring(idx + 1, end) : null;
+    /**
+     * GET /api/v1/payments/success
+     * PayPal redirects here after customer approves payment
+     */
+    @GetMapping("/success")
+    public ResponseEntity<PaymentDto.PaymentResponse> paymentSuccess(
+            @RequestParam String paymentId,
+            @RequestParam String PayerID,
+            @RequestParam String orderId) {
+        return ResponseEntity.ok(
+                paymentService.executePayment(paymentId, PayerID, orderId)
+        );
+    }
+
+    /**
+     * GET /api/v1/payments/cancel
+     * PayPal redirects here if customer cancels
+     */
+    @GetMapping("/cancel")
+    public ResponseEntity<Map<String, String>> paymentCancel(
+            @RequestParam String orderId) {
+        log.info("Payment cancelled for order: {}", orderId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Payment cancelled",
+                "orderId", orderId
+        ));
     }
 }

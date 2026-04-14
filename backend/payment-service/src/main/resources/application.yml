@@ -19,13 +19,22 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
   kafka:
     bootstrap-servers: localhost:29092
+    consumer:
+      group-id: payment-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: false
 
 eureka:
   client:
@@ -39,10 +48,11 @@ eureka:
 # Stripe configuration
 # Replace with real keys from dashboard.stripe.com
 # Leave as-is to use simulation mode (no real Stripe needed)
-stripe:
-  secret-key: ${STRIPE_SECRET_KEY:sk_test_REPLACE_WITH_YOUR_KEY}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_REPLACE_WITH_YOUR_KEY}
-  platform-account-id: ${STRIPE_PLATFORM_ACCOUNT_ID:acct_REPLACE_WITH_YOUR_ID}
+paypal:
+  client-id: 'AeFri9XLazx-1X5dJ1eBOctKJqVzQMd_RRkuCTBhy2jnvV2AvESgR_Fz8Z__M6VxS9r8e00_8kXHifU6'
+  client-secret: 'ELuq6tKtK6eX-7VtdHaY107jfbXRKW6w0QfSJCSBbzTQRZqq7QJ4SKbMDvrS-GtdpCN-o-AZZrbSlbOv'
+  mode: sandbox
+  base-url: https://api-m.sandbox.paypal.com
 
 jwt:
   secret: halal-bite-super-secret-jwt-key-2026-production
@@ -60,3 +70,7 @@ logging:
   level:
     com.halalbite.paymentservice: DEBUG
     org.springframework.kafka: INFO
+
+# Frontend URL for PayPal redirect
+app:
+  frontend-url: http://localhost:8088

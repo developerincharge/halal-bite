@@ -19,6 +19,12 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+
 eureka:
   client:
     service-url:

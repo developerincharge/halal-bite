@@ -91,8 +91,9 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/{id}").permitAll()
                         // Public menu browsing
                         .pathMatchers(HttpMethod.GET, "/api/v1/menus/**").permitAll()
-                        // Stripe webhook — no JWT, uses Stripe signature
-                        .pathMatchers("/api/v1/payments/webhook").permitAll()
+                        // PayPal — no JWT, uses PayPal's IPN for security instead and callbacks
+                        .pathMatchers("/api/v1/payments/success").permitAll()
+                        .pathMatchers("/api/v1/payments/cancel").permitAll()
                         // Everything else requires a valid JWT
                         .anyExchange().authenticated()
                 )
