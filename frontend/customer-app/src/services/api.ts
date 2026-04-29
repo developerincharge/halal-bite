@@ -195,11 +195,12 @@ export const orderApi = {
     specialInstructions?: string;
   }) => api.post<Order>('/orders', data),
 
-getMyOrders: (page = 0) =>
-  api.get<{ content: OrderSummary[]; totalPages: number }>(
-    `/orders?page=${page}&size=20`
-  ),
+  getMyOrders: (page = 0) =>
+    api.get<{ content: OrderSummary[]; totalPages: number }>(
+      `/orders?page=${page}&size=20`
+    ),
 
   getOrderById: (id: string) =>
     api.get<Order>(`/orders/${id}`),
+
 };

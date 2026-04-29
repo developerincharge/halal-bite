@@ -39,7 +39,7 @@ public interface UserMapper {
     // Convert CreateUserRequest → User entity
     // Ignore fields that are set by the system, not the client
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "keycloakId", ignore = true)
+    @Mapping(target = "userId", ignore = true)
     @Mapping(target = "addresses", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -50,7 +50,7 @@ public interface UserMapper {
     // NullValuePropertyMappingStrategy.IGNORE means null fields are skipped
     // so PATCH requests only update the fields that were actually sent
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "keycloakId", ignore = true)
+    @Mapping(target = "userId", ignore = true)
     @Mapping(target = "email", ignore = true)
     @Mapping(target = "addresses", ignore = true)
     @Mapping(target = "isActive", ignore = true)

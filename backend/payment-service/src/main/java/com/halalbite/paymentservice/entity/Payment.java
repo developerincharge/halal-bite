@@ -58,10 +58,10 @@ public class Payment {
     @Column(name = "restaurant_id")
     private UUID restaurantId;
 
-    @Column(name = "paypal_payment_id")
+    @Column(name = "paypal_payment_id", length = 100)
     private String paypalPaymentId;
 
-    @Column(name = "paypal_payer_id")
+    @Column(name = "paypal_payer_id", length = 100)
     private String paypalPayerId;
 
     @Column(name = "approval_url", length = 1000)

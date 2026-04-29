@@ -12,8 +12,6 @@
 # Watch logs:         docker compose logs -f kafka
 # ============================================================
 
-version: '3.8'
-
 # =====================================================
 # Halal Bite — Complete Docker Compose
 # Starts the entire platform with one command:
@@ -50,7 +48,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./infrastructure/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U halalbiteuser" ]
+      test: ["CMD-SHELL", "pg_isready -U halalbiteuser -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -133,11 +131,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8761/actuator/health | grep UP || exit 1" ]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
 
   auth-service:
     build:
@@ -161,13 +159,13 @@ services:
       postgres:
         condition: service_healthy
       service-registry:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8081/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
 
   user-service:
     build:
@@ -193,11 +191,11 @@ services:
       service-registry:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8082/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
 
   restaurant-service:
     build:
@@ -223,11 +221,11 @@ services:
       service-registry:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8083/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
 
   menu-service:
     build:
@@ -253,11 +251,11 @@ services:
       service-registry:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8084/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 45s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8084/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
 
   order-service:
     build:
@@ -284,15 +282,15 @@ services:
       kafka:
         condition: service_healthy
       service-registry:
-        condition: service_healthy
+        condition: service_started
       menu-service:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8085/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8085/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
 
   payment-service:
     build:
@@ -324,11 +322,11 @@ services:
       service-registry:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8086/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8086/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
 
   notification-service:
     build:
@@ -361,11 +359,11 @@ services:
       service-registry:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8087/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8087/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
 
   api-gateway:
     build:
@@ -384,17 +382,17 @@ services:
       JWT_SECRET: halal-bite-super-secret-jwt-key-2026-production
     depends_on:
       service-registry:
-        condition: service_healthy
+        condition: service_started
       auth-service:
-        condition: service_healthy
+        condition: service_started
       restaurant-service:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1" ]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: [ "CMD-SHELL", "wget -q -O- http://localhost:8080/actuator/health | grep UP || exit 1" ]
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
 
 # ===================================================
 # NETWORKS AND VOLUMES

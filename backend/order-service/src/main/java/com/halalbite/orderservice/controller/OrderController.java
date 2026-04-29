@@ -136,19 +136,48 @@ public class OrderController {
      *
      * Body: { "status": "PREPARING", "reason": "optional note" }
      */
+//    @PatchMapping("/{id}/order/status")
+//    public ResponseEntity<OrderDto.OrderResponse> updateStatus(
+//            @PathVariable UUID id,
+//            @Valid @RequestBody OrderDto.UpdateStatusRequest request,
+//            @AuthenticationPrincipal Jwt jwt) {
+//
+//        // TODO: Extract restaurantId from restaurant-service using owner's JWT sub
+//        // For now using a placeholder — restaurant service call needed
+//        UUID restaurantId = UUID.fromString(jwt.getClaim("restaurantId") != null
+//            ? jwt.getClaim("restaurantId").toString()
+//            : "00000000-0000-0000-0000-000000000000");
+//
+//        log.info("PATCH /api/v1/orders/{}/status → {}", id, request.getStatus());
+//        return ResponseEntity.ok
+//           (orderService.updateOrderStatus(id, request, restaurantId));
+//    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderDto.OrderResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody OrderDto.UpdateStatusRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        // TODO: Extract restaurantId from restaurant-service using owner's JWT sub
-        // For now using a placeholder — restaurant service call needed
-        UUID restaurantId = UUID.fromString(jwt.getClaim("restaurantId") != null
-            ? jwt.getClaim("restaurantId").toString()
-            : "00000000-0000-0000-0000-000000000000");
-
-        log.info("PATCH /api/v1/orders/{}/status → {}", id, request.getStatus());
-        return ResponseEntity.ok(orderService.updateOrderStatus(id, request, restaurantId));
+        // Get the order first to find restaurantId — no longer need it from JWT
+        UUID ownerUserId = UUID.fromString(jwt.getSubject());
+        log.info("PATCH /api/v1/orders/{}/status → {} by owner: {}", id, request.getStatus(), ownerUserId);
+        return ResponseEntity.ok(
+                orderService.updateOrderStatusByOwner(id, request, ownerUserId)
+        );
     }
+
+
+    /**
+     * GET /api/v1/orders/restaurant-view/{id}
+     * Restaurant owner views a specific order — no customerId check
+     */
+    @GetMapping("/restaurant-view/{id}")
+    public ResponseEntity<OrderDto.OrderResponse> getOrderForRestaurant(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        return ResponseEntity.ok(orderService.getOrderForRestaurant(id));
+    }
+
 }

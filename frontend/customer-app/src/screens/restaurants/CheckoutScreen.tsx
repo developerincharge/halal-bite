@@ -30,77 +30,60 @@ export default function CheckoutScreen({ navigation }: any) {
       return;
     }
 
-    setLoading(true);
-    try {
-      const { data: order } = await orderApi.placeOrder({
-        restaurantId,
-        items: items.map(i => ({
-          menuItemId: i.menuItem.id,
-          quantity: i.quantity,
-          specialRequests: i.specialRequests,
-        })),
-        deliveryStreetAddress: streetAddress,
-        deliveryCity: city,
-        deliveryState: state,
-        deliveryPostalCode: postalCode,
-        specialInstructions,
-      });
-
-          // Step 2 — initiate PayPal payment
-    const { data: payment } = await api.post('/payments/initiate', {
-      orderId: order.id,
-      amount: order.totalAmount,
+ setLoading(true);
+  try {
+    // Step 1 — place the order
+    const { data: order } = await orderApi.placeOrder({
+      restaurantId: restaurantId!,
+      items: items.map(i => ({
+        menuItemId: i.menuItem.id,
+        quantity: i.quantity,
+      })),
+      deliveryStreetAddress: streetAddress,
+      deliveryCity: city,
+      deliveryState: state,
+      deliveryPostalCode: postalCode,
+      specialInstructions,
     });
-      // For simplicity, we'll just open the PayPal approval URL in the browser
-      // In a real app, you'd want to use a WebView and handle the redirect back to the app
-      const approvalUrl = payment.links.find((link: any) => link.rel === 'approve')?.href;
-      if (approvalUrl) {
-        // Open PayPal approval URL
-        // In React Native, you can use Linking.openURL(approvalUrl);
-        Alert.alert(
-          'Payment Required',
-          'You will be redirected to PayPal to complete your payment.',
-          [{
-            text: 'Proceed to PayPal',
-            onPress: () => {
-              // Open the approval URL in the browser
-              // After payment, PayPal will redirect back to the app with a success URL
-              // You would need to handle that URL and confirm the payment on the backend
-              // For this example, we'll assume payment is successful after redirection
-              navigation.navigate('PaymentProcessing', { orderId: order.id });
-            },
-          }]
-        );
-      } else {
-        Alert.alert('Payment Error', 'Failed to initiate payment. Please try again.');
-        return;
-      } 
 
-      clearCart();
+    // Step 2 — wait for Kafka to create the payment (1.5s is enough)
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-          // Step 3 — open PayPal approval URL in browser
+    // Step 3 — fetch the PayPal approval URL
+    const { data: payment } = await api.get(`/payments/order/${order.id}`);
+
+    clearCart();
+
+    // Step 4 — show PayPal button to customer
     if (payment.approvalUrl) {
       Alert.alert(
-        '🛒 Complete Payment',
-        'You will be redirected to PayPal to complete your payment.',
+        'Order Placed!',
+        `Order #${order.id.slice(-6).toUpperCase()} confirmed.\n\nTap below to complete payment via PayPal.`,
         [
           {
             text: 'Pay with PayPal',
-            onPress: () => {
-              // Open PayPal in browser
-              import('react-native').then(({ Linking }) => {
-                Linking.openURL(payment.approvalUrl);
-              });
-              // Navigate to orders so user can track
+            onPress: async () => {
+              const { Linking } = await import('react-native');
+              await Linking.openURL(payment.approvalUrl);
+              // Navigate to orders so they can track
               navigation.navigate('Orders');
             },
           },
-          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Pay Later',
+            style: 'cancel',
+            onPress: () => navigation.navigate('Orders'),
+          },
         ]
       );
+    } else {
+      Alert.alert('Order Placed!', 'Your order has been received.');
+      navigation.navigate('Orders');
     }
+
   } catch (err: any) {
-    Alert.alert('Error', err.response?.data?.message ?? 'Failed to place order');
+    const msg = err.response?.data?.message ?? 'Failed to place order';
+    Alert.alert('Error', msg);
   } finally {
     setLoading(false);
   }

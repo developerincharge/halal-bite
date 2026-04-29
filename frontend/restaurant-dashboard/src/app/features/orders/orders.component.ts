@@ -190,12 +190,20 @@ export class OrdersComponent implements OnInit {
     }
   }
 
-  private loadOrders(restaurantId: string) {
-    this.orderService.getActiveOrders(restaurantId).subscribe({
-      next: (orders) => { this.activeOrders.set(orders); this.loading.set(false); },
-      error: () => this.loading.set(false)
-    });
-  }
+private loadOrders(restaurantId: string) {
+  console.log('Loading orders for restaurantId:', restaurantId);  // ← add this
+  this.orderService.getActiveOrders(restaurantId).subscribe({
+    next: (orders) => {
+      console.log('Orders received:', orders);  // ← add this
+      this.activeOrders.set(orders);
+      this.loading.set(false);
+    },
+    error: (err) => {
+      console.error('Error loading orders:', err);  // ← add this
+      this.loading.set(false);
+    }
+  });
+}
 
   private loadHistory(restaurantId: string) {
     this.orderService.getOrderHistory(restaurantId).subscribe({

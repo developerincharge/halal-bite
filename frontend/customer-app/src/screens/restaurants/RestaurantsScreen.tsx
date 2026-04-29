@@ -18,17 +18,25 @@ export default function RestaurantsScreen({ navigation }: any) {
     loadRestaurants();
   }, []);
 
-  const loadRestaurants = async () => {
-    try {
-      const { data } = await restaurantApi.getAll();
-      setRestaurants(data.content);
-    } catch (e) {
-      console.error('Failed to load restaurants', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+const loadRestaurants = async () => {
+  try {
+    console.log('Fetching restaurants from API...');
+    const { data } = await restaurantApi.getAll();
+    console.log('API response:', JSON.stringify(data));
+    console.log('Content array:', data?.content);
+    
+    const list = data?.content ?? [];
+    console.log('Restaurant count:', list.length);
+    setRestaurants(list);
+  } catch (e: any) {
+    console.error('Error loading restaurants:', e?.message);
+    console.error('Error response:', e?.response?.data);
+    console.error('Error status:', e?.response?.status);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   const handleSearch = async (query: string) => {
     setSearch(query);
