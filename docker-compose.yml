@@ -36,7 +36,7 @@ services:
     image: postgres:16-alpine
     container_name: halal-bite-postgres
     networks:
-      - halal-bite-network
+      - halal-bite-network    # ← ADD THIS LINE
     restart: unless-stopped
     environment:
       POSTGRES_USER: halalbiteuser
@@ -48,7 +48,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./infrastructure/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U halalbiteuser -d postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U halalbiteuser -d postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5

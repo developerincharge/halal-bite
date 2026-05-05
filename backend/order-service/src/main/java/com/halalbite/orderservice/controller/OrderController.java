@@ -90,6 +90,19 @@ public class OrderController {
         UUID customerId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(orderService.getOrderById(id, customerId));
     }
+    /**
+     * GET /api/v1/orders/admin/restaurant/{restaurantId}
+     * Admin views all orders for any restaurant — no ownership check
+     */
+    @GetMapping("/admin/restaurant/{restaurantId}")
+    public ResponseEntity<Page<OrderDto.OrderSummaryResponse>> getRestaurantOrdersForAdmin(
+            @PathVariable UUID restaurantId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(orderService.getRestaurantOrders(restaurantId, pageable));
+    }
 
     /**
      * DELETE /api/v1/orders/{id}

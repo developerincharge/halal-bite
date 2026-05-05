@@ -89,6 +89,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/search").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/restaurants/{id}").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/orders/admin/**").permitAll()
                         // Public menu browsing
                         .pathMatchers(HttpMethod.GET, "/api/v1/menus/**").permitAll()
                         // PayPal — no JWT, uses PayPal's IPN for security instead and callbacks

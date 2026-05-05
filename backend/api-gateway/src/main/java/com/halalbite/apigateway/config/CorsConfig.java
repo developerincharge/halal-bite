@@ -27,49 +27,50 @@ import java.util.List;
  * TODO: In production, replace localhost origins with your real domains
  * e.g. https://app.halalbite.com, https://admin.halalbite.com
  */
-@Configuration
+//@Configuration
 public class CorsConfig {
 
-    @Bean
-    public CorsWebFilter corsWebFilter() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-
-        // Allowed origins — your frontend apps
-          corsConfig.addAllowedOrigin("http://localhost:4200");
-//        corsConfig.setAllowedOrigins(List.of(
-//            "http://localhost:3000",   // Next.js admin portal
-//            "http://localhost:4200",   // Angular restaurant dashboard
-//            "http://localhost:8081",   // React Native / Expo web
-//            "http://localhost:19006"   // Expo web alternate port
-//        ));
-
-        // Allowed HTTP methods
-        corsConfig.addAllowedMethod("*");
-//        corsConfig.setAllowedMethods(List.of(
-//            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-//        ));
-
-        // Allowed headers — Authorization is critical for JWT
-         corsConfig.addAllowedHeader("*");
-
-//        corsConfig.setAllowedHeaders(List.of(
-//            "Authorization",
-//            "Content-Type",
-//            "Accept",
-//            "Origin",
-//            "X-Requested-With"
-//        ));
-
-        // Allow cookies and auth headers to be sent
-        corsConfig.setAllowCredentials(true);
-
-        // Cache preflight response for 1 hour (reduces OPTIONS requests)
-        corsConfig.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Apply this CORS config to ALL routes
-        source.registerCorsConfiguration("/**", corsConfig);
-
-        return new CorsWebFilter(source);
-    }
+//    @Bean
+//    public CorsWebFilter corsWebFilter() {
+//        CorsConfiguration corsConfig = new CorsConfiguration();
+//
+//        // Allowed origins — your frontend apps
+//          corsConfig.addAllowedOrigin("http://localhost:4200");
+////        corsConfig.setAllowedOrigins(List.of(
+////            "http://localhost:3000",   // Next.js admin portal
+////            "http://localhost:4200",  // Angular restaurant dashboard
+////            "http://localhost:4201", // admin portal
+////            "http://localhost:8081",   // React Native / Expo web
+////            "http://localhost:19006"   // Expo web alternate port
+////        ));
+//
+//        // Allowed HTTP methods
+//        corsConfig.addAllowedMethod("*");
+////        corsConfig.setAllowedMethods(List.of(
+////            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+////        ));
+//
+//        // Allowed headers — Authorization is critical for JWT
+//         corsConfig.addAllowedHeader("*");
+//
+////        corsConfig.setAllowedHeaders(List.of(
+////            "Authorization",
+////            "Content-Type",
+////            "Accept",
+////            "Origin",
+////            "X-Requested-With"
+////        ));
+//
+//        // Allow cookies and auth headers to be sent
+//        corsConfig.setAllowCredentials(true);
+//
+//        // Cache preflight response for 1 hour (reduces OPTIONS requests)
+//        corsConfig.setMaxAge(3600L);
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        // Apply this CORS config to ALL routes
+//        source.registerCorsConfiguration("/**", corsConfig);
+//
+//        return new CorsWebFilter(source);
+//    }
 }

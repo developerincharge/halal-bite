@@ -60,6 +60,7 @@ export const restaurantApi = {
 // Orders
 // =====================================================
 export const orderApi = {
+  // Use admin endpoint — no ownership check
   getByRestaurant: (restaurantId: string, page = 0) =>
-    api.get(`/orders/restaurant/${restaurantId}?page=${page}&size=20`),
+    api.get(`/orders/admin/restaurant/${restaurantId}?page=${page}&size=50`),
 };

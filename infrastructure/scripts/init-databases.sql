@@ -10,13 +10,13 @@
 -- ============================================================
 
 -- Create all microservice databases
-CREATE DATABASE user_service_db;
-CREATE DATABASE restaurant_service_db;
-CREATE DATABASE menu_service_db;
-CREATE DATABASE order_service_db;
-CREATE DATABASE payment_service_db;
-CREATE DATABASE notification_service_db;
-CREATE DATABASE keycloak_db;
+SELECT 'CREATE DATABASE auth_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auth_service_db')\gexec
+SELECT 'CREATE DATABASE user_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'user_service_db')\gexec
+SELECT 'CREATE DATABASE restaurant_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'restaurant_service_db')\gexec
+SELECT 'CREATE DATABASE menu_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'menu_service_db')\gexec
+SELECT 'CREATE DATABASE order_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'order_service_db')\gexec
+SELECT 'CREATE DATABASE payment_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'payment_service_db')\gexec
+SELECT 'CREATE DATABASE notification_service_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'notification_service_db')\gexec
 
 -- Grant the app user full access to each database
 GRANT ALL PRIVILEGES ON DATABASE user_service_db        TO halalbiteuser;
