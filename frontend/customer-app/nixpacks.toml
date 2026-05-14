@@ -1,0 +1,9 @@
+# frontend/customer-app/nixpacks.toml
+[phases.build]
+cmds = ["npm ci", "npx expo export --platform web"]
+ 
+[start]
+cmd = "npx serve dist -l $PORT"
+ 
+[variables]
+NODE_ENV = "production"

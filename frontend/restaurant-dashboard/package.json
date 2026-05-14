@@ -4,8 +4,9 @@
   "description": "Halal Bite — Restaurant Owner Dashboard",
   "scripts": {
     "ng": "ng",
+    "build": "ng build --configuration production",
     "start": "ng serve",
-    "build": "ng build",
+    "serve:prod": "npx serve -s dist/restaurant-dashboard/browser -l $PORT",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -35,6 +36,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "serve": "^14.2.6",
     "typescript": "~5.4.2"
   }
 }

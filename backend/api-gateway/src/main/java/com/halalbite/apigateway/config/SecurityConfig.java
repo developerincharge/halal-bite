@@ -16,7 +16,9 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Security Configuration for API Gateway
@@ -58,13 +60,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow Angular dev server and production domains
-        config.setAllowedOrigins(List.of(
+        // local development - allow all origins (for testing)
+        config.setAllowedOrigins(Arrays.asList(
                 "http://localhost:4200",   // Angular restaurant dashboard
                 "http://localhost:4201",   // Admin portal
                 "http://localhost:8088",   // Customer app web ← ADD THIS
-                "http://localhost:3000"    // Future use
-        ));
+               // "http://localhost:3000"    // Future use
+                // Railway production URLs
+                System.getenv().getOrDefault("ALLOWED_ORIGIN_DASHBOARD", ""),
+                System.getenv().getOrDefault("ALLOWED_ORIGIN_ADMIN", ""),
+                System.getenv().getOrDefault("ALLOWED_ORIGIN_CUSTOMER", "")
+        ).stream().filter(s -> !s.isEmpty()).collect(Collectors.toList()));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

@@ -1,0 +1,9 @@
+# frontend/restaurant-dashboard/nixpacks.toml
+[phases.build]
+cmds = ["npm ci", "npm run build"]
+
+[start]
+cmd = "npx serve -s dist/restaurant-dashboard/browser -l $PORT"
+
+[variables]
+NODE_ENV = "production"

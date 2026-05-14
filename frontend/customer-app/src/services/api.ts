@@ -8,7 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // For iOS simulator:    use localhost
 // For physical device:  use your machine's local IP e.g. 192.168.1.x
 // =====================================================
-const BASE_URL = 'http://localhost:8080/api/v1';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
+  || 'http://localhost:8080/api/v1';
 
 const api = axios.create({
   baseURL: BASE_URL,

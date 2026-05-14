@@ -1,0 +1,9 @@
+# frontend/admin-portal/nixpacks.toml
+[phases.build]
+cmds = ["npm ci", "npm run build"]
+
+[start]
+cmd = "npm start"
+
+[variables]
+NODE_ENV = "production"
